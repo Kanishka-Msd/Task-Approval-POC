@@ -45,17 +45,16 @@ class Task {
 
     query += ' ORDER BY created_at DESC';
 
+    // LIMIT and OFFSET must not be parameterized
     if (filters.limit) {
-      query += ' LIMIT ?';
-      params.push(filters.limit);
+      query += ` LIMIT ${parseInt(filters.limit)}`;
     }
 
     if (filters.offset) {
-      query += ' OFFSET ?';
-      params.push(filters.offset);
+      query += ` OFFSET ${parseInt(filters.offset)}`;
     }
 
-    const [rows] = await pool.execute(query, params);
+    const [rows] = params.length > 0 ? await pool.execute(query, params) : await pool.query(query);
     return rows;
   }
 
