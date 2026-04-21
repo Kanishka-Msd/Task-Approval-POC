@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import { fetchTasks } from './api';
 import CreateRequestForm from './components/CreateRequestForm';
@@ -8,48 +8,48 @@ import ApprovalScreen from './components/ApprovalScreen';
 function App() {
   const [tasks, setTasks] = useState([]);
   const [userFilter, setUserFilter] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const loadTasks = useCallback(async (filter = userFilter) => {
-    setLoading(true);
+  const loadTasks = async () => {
     try {
-      const result = await fetchTasks(filter);
-      if (result.success && result.data) {
-        setTasks(result.data.tasks || []);
-      } else {
-        setTasks([]);
-      }
+      const result = await fetchTasks(userFilter);
+      const taskList = Array.isArray(result?.data?.tasks) ? result.data.tasks : [];
+      setTasks(taskList);
     } catch (error) {
       console.error('Failed to load tasks:', error);
       setTasks([]);
-    } finally {
-      setLoading(false);
     }
-  }, [userFilter]);
-
-  const handleUserFilter = useCallback((user) => {
-    setUserFilter(user);
-    loadTasks(user);
-  }, [loadTasks]);
+  };
 
   useEffect(() => {
     loadTasks();
-  }, [loadTasks]);
+  }, []);
 
-  // Polling for real-time updates every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadTasks();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [loadTasks]);
+  const handleClear = async () => {
+    setUserFilter('');
+    try {
+      const result = await fetchTasks('');
+      const taskList = Array.isArray(result?.data?.tasks) ? result.data.tasks : [];
+      setTasks(taskList);
+    } catch (error) {
+      console.error('Failed to clear filter:', error);
+      setTasks([]);
+    }
+  };
 
   return (
     <div className="app-container">
-      <h1>Task Approval Workflow App</h1>
+      <h1>Task + Approval Workflow App</h1>
 
-      {loading && <div className="loading">Loading tasks...</div>}
+      <div className="filter-bar">
+        <input
+          type="text"
+          placeholder="Filter by user (creator or approver)"
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+        />
+        <button onClick={loadTasks}>Search</button>
+        <button onClick={handleClear}>Clear</button>
+      </div>
 
       <div className="grid">
         <div className="card">
@@ -64,7 +64,8 @@ function App() {
       </div>
 
       <div className="card full-width">
-        <TaskList tasks={tasks} onUserFilter={handleUserFilter} />
+        <h2>Task List</h2>
+        <TaskList tasks={tasks} />
       </div>
     </div>
   );

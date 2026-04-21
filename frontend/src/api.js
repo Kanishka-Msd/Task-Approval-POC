@@ -10,12 +10,20 @@ async function apiRequest(url, options = {}) {
       ...options,
     });
 
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+
+    const result = isJson ? await response.json() : await response.text();
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || `HTTP ${response.status}`);
+      if (isJson) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${result}`);
+      }
     }
 
-    return response.json();
+    return result;
   } catch (error) {
     console.error('API request failed:', error);
     throw error;

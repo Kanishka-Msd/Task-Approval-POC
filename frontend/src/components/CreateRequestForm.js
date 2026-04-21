@@ -8,121 +8,74 @@ function CreateRequestForm({ onCreated }) {
     created_by: '',
     assigned_to: '',
   });
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!form.title.trim()) {
-      newErrors.title = 'Title is required';
-    } else if (form.title.length > 255) {
-      newErrors.title = 'Title must be less than 255 characters';
-    }
-    if (!form.created_by.trim()) {
-      newErrors.created_by = 'Creator is required';
-    }
-    if (!form.assigned_to.trim()) {
-      newErrors.assigned_to = 'Approver is required';
-    }
-    return newErrors;
-  };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrors({});
-
     try {
-      await createTask(form);
-      setForm({
-        title: '',
-        description: '',
-        created_by: '',
-        assigned_to: '',
-      });
-      onCreated();
+      const result = await createTask(form);
+
+      if (result?.success && result?.data?.id) {
+        alert('Task created successfully');
+
+        setForm({
+          title: '',
+          description: '',
+          created_by: '',
+          assigned_to: '',
+        });
+
+        onCreated();
+      } else {
+        alert(result?.error || 'Failed to create task');
+      }
     } catch (error) {
-      setErrors({ submit: error.message });
-    } finally {
-      setIsSubmitting(false);
+      console.error('Create task failed:', error);
+      alert(error.message || 'Failed to create task');
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="form">
-      <div className="form-group">
-        <input
-          name="title"
-          placeholder="Task Title"
-          value={form.title}
-          onChange={handleChange}
-          className={errors.title ? 'error' : ''}
-          required
-        />
-        {errors.title && <span className="error-message">{errors.title}</span>}
-      </div>
+      <input
+        name="title"
+        placeholder="Title"
+        value={form.title}
+        onChange={handleChange}
+        required
+      />
 
-      <div className="form-group">
-        <textarea
-          name="description"
-          placeholder="Task Description"
-          value={form.description}
-          onChange={handleChange}
-          rows="3"
-        />
-      </div>
+      <textarea
+        name="description"
+        placeholder="Description"
+        value={form.description}
+        onChange={handleChange}
+      />
 
-      <div className="form-group">
-        <input
-          name="created_by"
-          placeholder="Your Username"
-          value={form.created_by}
-          onChange={handleChange}
-          className={errors.created_by ? 'error' : ''}
-          required
-        />
-        {errors.created_by && <span className="error-message">{errors.created_by}</span>}
-      </div>
+      <input
+        name="created_by"
+        placeholder="Created by"
+        value={form.created_by}
+        onChange={handleChange}
+        required
+      />
 
-      <div className="form-group">
-        <input
-          name="assigned_to"
-          placeholder="Approver Username"
-          value={form.assigned_to}
-          onChange={handleChange}
-          className={errors.assigned_to ? 'error' : ''}
-          required
-        />
-        {errors.assigned_to && <span className="error-message">{errors.assigned_to}</span>}
-      </div>
+      <input
+        name="assigned_to"
+        placeholder="Assigned approver"
+        value={form.assigned_to}
+        onChange={handleChange}
+        required
+      />
 
-      {errors.submit && <div className="error-message">{errors.submit}</div>}
-
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Creating...' : 'Create Task'}
-      </button>
+      <button type="submit">Create Task</button>
     </form>
   );
 }
