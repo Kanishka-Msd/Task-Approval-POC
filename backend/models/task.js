@@ -45,6 +45,7 @@ class Task {
 
     query += ' ORDER BY created_at DESC';
 
+    // LIMIT and OFFSET must not be parameterized
     if (filters.limit) {
       query += ` LIMIT ${parseInt(filters.limit)}`;
     }
@@ -53,9 +54,7 @@ class Task {
       query += ` OFFSET ${parseInt(filters.offset)}`;
     }
 
-    const [rows] =
-      params.length > 0 ? await pool.execute(query, params) : await pool.query(query);
-
+    const [rows] = params.length > 0 ? await pool.execute(query, params) : await pool.query(query);
     return rows;
   }
 
@@ -64,12 +63,13 @@ class Task {
     return rows[0];
   }
 
-  static async updateStatus(id, status, userId = null) {
+  static async updateStatus(id, status, userId) {
     // Validation
     if (!['Approved', 'Rejected'].includes(status)) {
       throw new Error('Invalid status');
     }
 
+    // Get current task
     const task = await this.findById(id);
     if (!task) {
       throw new Error('Task not found');
@@ -79,11 +79,12 @@ class Task {
       throw new Error('Task is not in pending status');
     }
 
-    // For POC/MVP, skip assigned-user enforcement
-    // In production, compare task.assigned_to with the authenticated user
+    if (task.assigned_to !== userId) {
+      throw new Error('Only assigned user can update status');
+    }
 
     await pool.execute(
-      'UPDATE tasks SET status = ? WHERE id = ?',
+      'UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [status, id]
     );
 
